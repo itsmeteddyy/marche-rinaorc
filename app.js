@@ -5,11 +5,11 @@
   const KEY = "sb_publishable_yjwT8YidpXAsj4fmw9HSUw_oQi2-TcJ"; // public key: reads only, writes are code-checked
   const DEAL = 0.75, FEW = 3, PAGE = 1000, AUTO_MS = 60000;
   const STATUS = [["todo", "À acheter"], ["mine", "Je m'en occupe"], ["done", "Acheté"]];
-  const TABS = ["plans", "hdv", "boutique", "argent", "liste"];
+  const TABS = ["plans", "hdv", "boutique", "argent", "liste", "equipe"];
   const S = {
     products: [], byKey: new Map(), listings: new Map(), achats: [], notes: [], lastScan: null, nListings: 0,
     tab: "plans", q: "", type: "all", dealsOnly: false, sort: "discount", hdvLimit: 150, listFilter: "open",
-    open: null, loading: false, loadedAt: null, error: null,
+    open: null, loading: false, loadedAt: null, error: null, balances: null, balanceDay: new Map(), balanceError: null,
     code: store("marche.code") || "", pseudo: store("marche.pseudo") || "",
   };
 
@@ -100,6 +100,7 @@
         read("achats?select=*&order=created_at.desc"),
         read("notes?select=*&order=created_at.asc"),
         read("scans?select=kind,scanned_by,listings,complete,gone,at&order=at.desc&limit=1"),
+        loadBalances(),
       ]);
       build(listings, shop);
       S.achats = achats; S.notes = notes; S.lastScan = scans[0] || null;
@@ -109,6 +110,23 @@
     } finally {
       S.loading = false; setRefreshing(false);
       renderMeta(); renderAll(); if (S.open) renderSheet();
+    }
+  }
+
+  // Team money: never fails the rest of the page (the tables may not exist yet).
+  async function loadBalances() {
+    try {
+      const day = encodeURIComponent(new Date(Date.now() - 864e5).toISOString());
+      const [rows, hist] = await Promise.all([
+        read("balances?select=player,amount,shown,updated_at&order=amount.desc"),
+        read(`balance_history?select=player,amount,at&at=gte.${day}&order=at.asc`),
+      ]);
+      S.balances = rows.map((r) => ({ player: r.player, amount: +r.amount, shown: r.shown, at: r.updated_at }));
+      S.balanceDay = new Map();
+      for (const h of hist) if (!S.balanceDay.has(h.player)) S.balanceDay.set(h.player, +h.amount);
+      S.balanceError = null;
+    } catch (e) {
+      S.balances = null; S.balanceError = e.message;
     }
   }
 
@@ -158,7 +176,7 @@
   }
 
   // ---------- views ----------
-  function renderAll() { renderPlans(); renderHdv(); renderShop(); renderMoney(); renderList(); }
+  function renderAll() { renderPlans(); renderHdv(); renderShop(); renderMoney(); renderList(); renderTeam(); }
 
   function renderPlans() {
     const box = $("plans"); box.replaceChildren();
@@ -221,6 +239,37 @@
       (p) => [td(rc(p.shop.buy), "r num", full(p.shop.buy)), td(rc(p.hdv.median), "r num", full(p.hdv.median)), td("+" + rc(p.hdv.median - p.shop.buy), "r num good")], none);
     moneyRows("m3", ps.filter((p) => p.hdv && p.hdv.n >= FEW && p.hdv.margin && p.hdv.margin / p.hdv.best >= 0.25).sort((x, y) => y.hdv.margin - x.hdv.margin).slice(0, 60),
       (p) => [td(rc(p.hdv.best), "r num", full(p.hdv.best)), td(rc(p.hdv.best + p.hdv.margin), "r num", full(p.hdv.best + p.hdv.margin)), td("+" + rc(p.hdv.margin), "r num good"), td(String(p.hdv.n), "r num")], none);
+  }
+
+  // ---------- team money ----------
+  const signed = (d) => (d > 0 ? "+" : d < 0 ? "−" : "") + rc(Math.abs(d));
+  function renderTeam() {
+    const body = $("teamRows"); body.replaceChildren();
+    const rows = S.balances || [];
+    const total = rows.reduce((t, r) => t + r.amount, 0);
+    const dayDiff = rows.reduce((t, r) => t + r.amount - (S.balanceDay.get(r.player) ?? r.amount), 0);
+    $("teamTotal").textContent = rows.length ? rc(total) : "—"; $("teamTotal").title = rows.length ? full(total) : "";
+    $("teamDay").textContent = rows.length ? signed(dayDiff) : "—";
+    $("teamDay").className = dayDiff > 0 ? "good" : dayDiff < 0 ? "down" : "";
+    $("teamCount").textContent = rows.length;
+    if (!rows.length) {
+      const text = S.balances === null && S.balanceError
+        ? "Les soldes ne sont pas encore activés : lance outils/supabase/soldes.sql dans Supabase."
+        : "Aucun solde reçu : il arrive dès qu'un joueur avec le mod et le code d'équipe est sur le serveur.";
+      body.append(el("tr", null, el("td", { colspan: 5, class: "empty", text })));
+      return;
+    }
+    for (const r of rows) {
+      const d = r.amount - (S.balanceDay.get(r.player) ?? r.amount);
+      body.append(el("tr", null,
+        el("td", null, el("span", { class: "who" },
+          el("img", { src: `https://mc-heads.net/avatar/${encodeURIComponent(r.player)}/36`, alt: "", loading: "lazy", width: 18, height: 18 }),
+          el("span", { class: "ttl", text: r.player }))),
+        td(rc(r.amount), "r num", full(r.amount)),
+        td(d ? signed(d) : "=", "r num " + (d > 0 ? "good" : d < 0 ? "down" : "")),
+        td(total > 0 ? Math.round((r.amount / total) * 100) + " %" : "—", "r num"),
+        td(since(r.at), null, when(r.at))));
+    }
   }
 
   // ---------- team: shopping list and notes ----------

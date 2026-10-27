@@ -126,6 +126,12 @@ td .ttl { font-weight: 500; }
 .money h3 { font-family: var(--display); font-size: 18px; margin: 0 0 4px; }
 .money .how { color: var(--muted); margin: 0 0 10px; max-width: 70ch; }
 
+/* Team money */
+.team-stats { margin-bottom: 14px; }
+.team-stats b { font-size: 22px; }
+.down { color: var(--warn); }
+td .who img { image-rendering: pixelated; }
+
 /* Shopping list */
 .list { display: grid; gap: 10px; }
 .item { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; }
@@ -212,6 +218,7 @@ img { max-width: 100%; }
       <button class="tab" role="tab" data-tab="boutique" id="t-boutique">Boutique</button>
       <button class="tab" role="tab" data-tab="argent" id="t-argent">Gagner de l'argent</button>
       <button class="tab" role="tab" data-tab="liste" id="t-liste">Liste d'achats <span class="count" id="c-liste">0</span></button>
+      <button class="tab" role="tab" data-tab="equipe" id="t-equipe">Équipe</button>
     </nav>
   </div>
 </header>
@@ -326,6 +333,24 @@ img { max-width: 100%; }
     </div>
     <div id="listNotice"></div>
     <div class="list" id="list"></div>
+  </section>
+
+  <section id="v-equipe" data-view="equipe" hidden>
+    <div class="view-head">
+      <div>
+        <h2>Argent de l'équipe</h2>
+        <p>Lu par le mod Pétale dans le panneau du serveur, dès qu'il change (au plus une fois par minute) et toutes les dix minutes sinon.</p>
+      </div>
+    </div>
+    <div class="stats team-stats">
+      <div><span>Total de l'équipe</span><b id="teamTotal">—</b></div>
+      <div><span>Sur 24 h</span><b id="teamDay">—</b></div>
+      <div><span>Joueurs</span><b id="teamCount">0</b></div>
+    </div>
+    <div class="tablebox"><table>
+      <thead><tr><th>Joueur</th><th class="r">Argent</th><th class="r">Sur 24 h</th><th class="r">Part</th><th>Mis à jour</th></tr></thead>
+      <tbody id="teamRows"></tbody>
+    </table></div>
   </section>
 </main>
 
