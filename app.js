@@ -5,10 +5,11 @@
   const KEY = "sb_publishable_yjwT8YidpXAsj4fmw9HSUw_oQi2-TcJ"; // public key: reads only, writes are code-checked
   const DEAL = 0.75, FEW = 3, PAGE = 1000, AUTO_MS = 60000;
   const STATUS = [["todo", "À acheter"], ["mine", "Je m'en occupe"], ["done", "Acheté"]];
-  const TABS = ["plans", "hdv", "boutique", "argent", "liste", "equipe"];
+  const TABS = ["plans", "hdv", "boutique", "commandes", "argent", "liste", "equipe"];
   const S = {
     products: [], byKey: new Map(), listings: new Map(), achats: [], notes: [], lastScan: null, nListings: 0,
     tab: "plans", q: "", type: "all", dealsOnly: false, sort: "discount", hdvLimit: 150, listFilter: "open",
+    orderLimit: 150, orders: [],
     open: null, loading: false, loadedAt: null, error: null, balances: null, balanceDay: new Map(), balanceError: null,
     code: store("marche.code") || "", pseudo: store("marche.pseudo") || "",
   };
@@ -94,15 +95,16 @@
     if (S.loading) return;
     S.loading = true; setRefreshing(true);
     try {
-      const [listings, shop, achats, notes, scans] = await Promise.all([
+      const [listings, shop, achats, notes, scans, orders] = await Promise.all([
         read("listings_active?select=key,product,item,item_id,type,variant,count,price,unit,lots,seller,ends_at,last_seen&order=unit.asc"),
         read("shop_prices?select=product,item,item_id,type,variant,buy,sell,no_buyback,seen"),
         read("achats?select=*&order=created_at.desc"),
         read("notes?select=*&order=created_at.asc"),
         read("scans?select=kind,scanned_by,listings,complete,gone,at&order=at.desc&limit=1"),
+        loadOrders(),
         loadBalances(),
       ]);
-      build(listings, shop);
+      build(listings, shop, orders);
       S.achats = achats; S.notes = notes; S.lastScan = scans[0] || null;
       S.error = null; S.loadedAt = new Date();
     } catch (e) {
@@ -130,9 +132,16 @@
     }
   }
 
+  // Buy orders: like the money, never fails the rest of the page (the table may not exist yet).
+  async function loadOrders() {
+    try {
+      return await read("orders_active?select=key,product,item,item_id,type,variant,unit,ordered,remaining,buyer,ends_at&order=unit.desc");
+    } catch { return []; }
+  }
+
   // Same rules as the mod's HdvAnalysis: identical lots count one by one; a deal is a best unit price at or below
   // 75 % of the median with at least 3 listings.
-  function build(listings, shop) {
+  function build(listings, shop, orders) {
     const products = new Map();
     const product = (k, row) => {
       if (!products.has(k)) products.set(k, { k, name: row.item, type: row.type || "Normal", variant: row.variant || "", id: row.item_id, hdv: null, shop: null });
@@ -159,6 +168,16 @@
       };
     }
     for (const s of shop) product(s.product, s).shop = { buy: s.buy == null ? null : +s.buy, sell: s.sell == null ? null : +s.sell, noBuyback: s.no_buyback };
+    // Orders: the best one per product (what delivering pays), how many are open and how many items are asked.
+    S.orders = [];
+    for (const o of orders || []) {
+      const p = product(o.product, o);
+      const row = { p, unit: +o.unit, remaining: o.remaining, ordered: o.ordered, buyer: o.buyer, endsAt: o.ends_at };
+      S.orders.push(row);
+      if (!p.orders) p.orders = { best: row.unit, buyer: row.buyer, n: 0, remaining: 0 };
+      p.orders.n++; p.orders.remaining += row.remaining;
+      if (row.unit > p.orders.best) { p.orders.best = row.unit; p.orders.buyer = row.buyer; }
+    }
     S.products = [...products.values()].sort((a, b) => a.name.localeCompare(b.name, "fr"));
     S.byKey = products;
     S.nListings = listings.reduce((t, l) => t + Math.max(1, l.lots || 1), 0);
@@ -172,11 +191,12 @@
     const scan = S.lastScan ? `dernier scan ${since(S.lastScan.at)}${S.lastScan.scanned_by ? " par " + S.lastScan.scanned_by : ""}` : "aucun scan pour l'instant";
     meta.textContent = `Skyblock · ${scan} · ${nf0.format(S.nListings)} annonces en vente`;
     $("c-plans").textContent = S.products.filter((p) => p.hdv && p.hdv.deal).length;
+    $("c-commandes").textContent = S.orders.length;
     $("access").textContent = S.code ? `Équipe : ${S.pseudo || "toi"}` : "Accès équipe";
   }
 
   // ---------- views ----------
-  function renderAll() { renderPlans(); renderHdv(); renderShop(); renderMoney(); renderList(); renderTeam(); }
+  function renderAll() { renderPlans(); renderHdv(); renderShop(); renderOrders(); renderMoney(); renderList(); renderTeam(); }
 
   function renderPlans() {
     const box = $("plans"); box.replaceChildren();
@@ -225,6 +245,31 @@
     }
   }
 
+  function ends(iso) {
+    const d = new Date(iso); if (!iso || isNaN(d)) return "";
+    const h = Math.round((d - Date.now()) / 36e5);
+    return h <= 0 ? "bientôt" : h < 24 ? `dans ${h} h` : `dans ${Math.round(h / 24)} j`;
+  }
+  function renderOrders() {
+    const body = $("orderRows"); body.replaceChildren();
+    const rows = S.orders.filter((o) => matches(o.p));
+    if (!rows.length) {
+      body.append(el("tr", null, el("td", { colspan: 7, class: "empty",
+        text: S.orders.length ? "Rien ne correspond." : "Aucune commande relevée : ouvre /commandes en jeu avec le mod (et lance outils/supabase/commandes.sql dans Supabase une fois)." })));
+      $("orderMore").replaceChildren(); return;
+    }
+    for (const o of rows.slice(0, S.orderLimit)) {
+      const p = o.p, buyback = p.shop && !p.shop.noBuyback ? p.shop.sell : null;
+      body.append(el("tr", rowAttrs(p.k), nameCell(p),
+        td(rc(o.unit), "r num", full(o.unit)), td(nf0.format(o.remaining), "r num", `${nf0.format(o.ordered - o.remaining)} livrés sur ${nf0.format(o.ordered)}`),
+        td(o.buyer), td(ends(o.endsAt), null, when(o.endsAt)),
+        td(p.hdv ? rc(p.hdv.best) : "—", "r num " + (p.hdv && p.hdv.best < o.unit ? "good" : ""), p.hdv ? full(p.hdv.best) : ""),
+        td(buyback != null ? rc(buyback) : "—", "r num", full(buyback))));
+    }
+    const more = $("orderMore"); more.replaceChildren();
+    if (rows.length > S.orderLimit) more.append(el("button", { class: "btn", text: `Voir ${Math.min(150, rows.length - S.orderLimit)} de plus`, onclick: () => { S.orderLimit += 150; renderOrders(); } }));
+  }
+
   function moneyRows(id, rows, cells, empty) {
     const body = $(id); body.replaceChildren();
     if (!rows.length) { body.append(el("tr", null, el("td", { colspan: 6, class: "empty", text: empty }))); return; }
@@ -239,6 +284,10 @@
       (p) => [td(rc(p.shop.buy), "r num", full(p.shop.buy)), td(rc(p.hdv.median), "r num", full(p.hdv.median)), td("+" + rc(p.hdv.median - p.shop.buy), "r num good")], none);
     moneyRows("m3", ps.filter((p) => p.hdv && p.hdv.n >= FEW && p.hdv.margin && p.hdv.margin / p.hdv.best >= 0.25).sort((x, y) => y.hdv.margin - x.hdv.margin).slice(0, 60),
       (p) => [td(rc(p.hdv.best), "r num", full(p.hdv.best)), td(rc(p.hdv.best + p.hdv.margin), "r num", full(p.hdv.best + p.hdv.margin)), td("+" + rc(p.hdv.margin), "r num good"), td(String(p.hdv.n), "r num")], none);
+    moneyRows("m4", ps.filter((p) => p.hdv && p.orders && p.hdv.best < p.orders.best).sort((x, y) => (y.orders.best - y.hdv.best) - (x.orders.best - x.hdv.best)),
+      (p) => [td(rc(p.hdv.best), "r num", full(p.hdv.best)), td(rc(p.orders.best), "r num", full(p.orders.best)), td("+" + rc(p.orders.best - p.hdv.best), "r num good"), td(nf0.format(p.orders.remaining), "r num"), td(p.hdv.bestSeller)], none);
+    moneyRows("m5", ps.filter((p) => p.shop && p.shop.buy != null && p.orders && p.shop.buy < p.orders.best).sort((x, y) => (y.orders.best - y.shop.buy) - (x.orders.best - x.shop.buy)),
+      (p) => [td(rc(p.shop.buy), "r num", full(p.shop.buy)), td(rc(p.orders.best), "r num", full(p.orders.best)), td("+" + rc(p.orders.best - p.shop.buy), "r num good"), td(nf0.format(p.orders.remaining), "r num")], none);
   }
 
   // ---------- team money ----------
@@ -370,6 +419,9 @@
     if (h && s && s.sell != null && h.best < s.sell) hints.push(`Acheté ${rc(h.best)} à l'HDV, revendu ${rc(s.sell)} à la boutique : +${rc(s.sell - h.best)} par unité.`);
     if (h && s && s.buy != null && h.n >= FEW && s.buy < h.median) hints.push(`La boutique le vend ${rc(s.buy)}, il s'échange autour de ${rc(h.median)} entre joueurs.`);
     if (h && h.deal) hints.push(`Le moins cher est ${pct(h.discount)} sous le prix habituel.`);
+    const od = p.orders;
+    if (od) hints.push(`${od.n > 1 ? od.n + " commandes demandent" : "Une commande demande"} ${nf0.format(od.remaining)} unités, jusqu'à ${rc(od.best)} l'unité pour le livreur (${od.buyer}).`
+      + (h && h.best < od.best ? ` Acheté ${rc(h.best)} à l'HDV : +${rc(od.best - h.best)} par unité livrée.` : ""));
     const stats = el("div", { class: "stats" },
       ...[["Meilleur / u", h ? rc(h.best) : "—", h && full(h.best)], ["Habituel", h ? rc(h.median) : "—", h && full(h.median)], ["Plus haut", h ? rc(h.high) : "—", h && full(h.high)],
         ["Annonces", h ? String(h.n) : "0"], ["Vendeurs", h ? String(h.sellers) : "0"],

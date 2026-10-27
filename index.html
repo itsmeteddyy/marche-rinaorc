@@ -216,6 +216,7 @@ img { max-width: 100%; }
       <button class="tab" role="tab" data-tab="plans" id="t-plans">Bons plans <span class="count" id="c-plans">0</span></button>
       <button class="tab" role="tab" data-tab="hdv" id="t-hdv">HDV</button>
       <button class="tab" role="tab" data-tab="boutique" id="t-boutique">Boutique</button>
+      <button class="tab" role="tab" data-tab="commandes" id="t-commandes">Commandes <span class="count" id="c-commandes">0</span></button>
       <button class="tab" role="tab" data-tab="argent" id="t-argent">Gagner de l'argent</button>
       <button class="tab" role="tab" data-tab="liste" id="t-liste">Liste d'achats <span class="count" id="c-liste">0</span></button>
       <button class="tab" role="tab" data-tab="equipe" id="t-equipe">Équipe</button>
@@ -284,6 +285,25 @@ img { max-width: 100%; }
     </table></div>
   </section>
 
+  <section id="v-commandes" data-view="commandes" hidden>
+    <div class="view-head">
+      <div>
+        <h2>Commandes des joueurs</h2>
+        <p>Ce que les joueurs demandent dans /commandes, et ce que tu touches en livrant (taxe de 5 % déjà retirée). Les mieux payées d'abord.</p>
+      </div>
+      <div class="filters">
+        <div class="seg" data-filter="type" role="group" aria-label="Type d'objet">
+          <button data-v="all" aria-pressed="true">Tous</button><button data-v="Normal" aria-pressed="false">Normaux</button><button data-v="Custom" aria-pressed="false">Custom</button>
+        </div>
+      </div>
+    </div>
+    <div class="tablebox"><table>
+      <thead><tr><th>Objet</th><th class="r">Tu gagnes / u</th><th class="r">Demandés</th><th>Acheteur</th><th>Fin</th><th class="r">HDV dès</th><th class="r">Rachat boutique</th></tr></thead>
+      <tbody id="orderRows"></tbody>
+    </table></div>
+    <div class="more" id="orderMore"></div>
+  </section>
+
   <section id="v-argent" data-view="argent" hidden>
     <div class="view-head">
       <div>
@@ -314,6 +334,22 @@ img { max-width: 100%; }
         <div class="tablebox"><table>
           <thead><tr><th>Objet</th><th class="r">Moins cher</th><th class="r">Suivant</th><th class="r">Gain / u</th><th class="r">Annonces</th></tr></thead>
           <tbody id="m3"></tbody>
+        </table></div>
+      </div>
+      <div>
+        <h3>Acheter à l'HDV, livrer une commande</h3>
+        <p class="how">Un joueur vend moins cher que ce qu'une commande paie au livreur (taxe retirée) : achète le lot, livre-le.</p>
+        <div class="tablebox"><table>
+          <thead><tr><th>Objet</th><th class="r">HDV dès</th><th class="r">Commande paie</th><th class="r">Gain / u</th><th class="r">Demandés</th><th>Vendeur</th></tr></thead>
+          <tbody id="m4"></tbody>
+        </table></div>
+      </div>
+      <div>
+        <h3>Acheter en boutique, livrer une commande</h3>
+        <p class="how">La boutique vend moins cher que ce qu'une commande paie au livreur.</p>
+        <div class="tablebox"><table>
+          <thead><tr><th>Objet</th><th class="r">Boutique</th><th class="r">Commande paie</th><th class="r">Gain / u</th><th class="r">Demandés</th></tr></thead>
+          <tbody id="m5"></tbody>
         </table></div>
       </div>
     </div>
