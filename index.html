@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Prix de la boutique et de l'hôtel des ventes du Skyblock Rinaorc, relevés par l'équipe.">
+<meta name="robots" content="noindex">
+<title>Marché Rinaorc</title>
+<link rel="icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky header with search and tabs, one working view at a time, product sheet sliding in from the right. */
+:root {
+  --bg: #fbf7f9;
+  --surface: #ffffff;
+  --sunk: #f5eef2;
+  --ink: #2a1a22;
+  --muted: #7c6571;
+  --line: #ecdde5;
+  --accent: #d93d75;
+  --accent-ink: #ffffff;
+  --soft: #ffe1ec;
+  --soft-ink: #9e2452;
+  --good: #1f8a5b;
+  --good-soft: #def4e9;
+  --warn: #b5651d;
+  --shadow: 0 10px 30px rgba(90, 30, 58, 0.12);
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "DM Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #171014; --surface: #21171c; --sunk: #1c1318; --ink: #f6e9ef; --muted: #b39aa7; --line: #3a2a32;
+    --accent: #ff7aa8; --accent-ink: #2a0f1a; --soft: #43202f; --soft-ink: #ffb3cd; --good: #6fd6a0;
+    --good-soft: #17352a; --warn: #f0a560; --shadow: 0 10px 30px rgba(0, 0, 0, 0.45); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #171014; --surface: #21171c; --sunk: #1c1318; --ink: #f6e9ef; --muted: #b39aa7; --line: #3a2a32;
+  --accent: #ff7aa8; --accent-ink: #2a0f1a; --soft: #43202f; --soft-ink: #ffb3cd; --good: #6fd6a0;
+  --good-soft: #17352a; --warn: #f0a560; --shadow: 0 10px 30px rgba(0, 0, 0, 0.45); color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* Header */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+.top .wrap { display: grid; gap: 12px; padding-block: 14px 0; }
+.brand { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.brand h1 { font-family: var(--display); font-weight: 700; font-size: 26px; letter-spacing: -0.01em; margin: 0; }
+.brand h1 .petal { color: var(--accent); }
+.brand .meta { color: var(--muted); font-size: 13px; }
+.searchrow { display: flex; gap: 10px; flex-wrap: wrap; }
+.search { flex: 1 1 260px; min-width: 0; display: flex; align-items: center; gap: 8px; background: var(--sunk); border: 1px solid var(--line); border-radius: 999px; padding: 0 14px; }
+.search input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 10px 0; outline: none; }
+.search svg { flex: none; color: var(--muted); }
+.tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin: 0 -4px; padding: 0 4px; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { flex: none; border: 0; background: transparent; padding: 10px 12px 12px; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab .count { font-family: var(--mono); font-size: 12px; background: var(--soft); color: var(--soft-ink); padding: 1px 7px; border-radius: 999px; margin-left: 4px; }
+
+main.wrap { padding-block: 22px 60px; }
+.view-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 10px 20px; margin-bottom: 16px; }
+.view-head h2 { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 0; text-wrap: balance; }
+.view-head p { margin: 4px 0 0; color: var(--muted); max-width: 65ch; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; background: var(--sunk); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.seg button { border: 0; background: transparent; padding: 5px 12px; border-radius: 999px; color: var(--muted); font-size: 13px; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.check { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
+select.sort { background: var(--sunk); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 13px; }
+
+/* Chips */
+.chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: var(--sunk); color: var(--muted); border: 1px solid var(--line); white-space: nowrap; }
+.chip.custom { background: var(--soft); color: var(--soft-ink); border-color: transparent; }
+.chip.deal { background: var(--good-soft); color: var(--good); border-color: transparent; }
+
+/* Deal cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.card .name { font-weight: 600; font-size: 16px; line-height: 1.25; overflow-wrap: anywhere; }
+.card .variant { color: var(--muted); font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card .price { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.card .price b { font-family: var(--mono); font-size: 24px; font-weight: 500; }
+.card .price .unit { color: var(--muted); font-size: 12px; }
+.card .drop { font-family: var(--mono); color: var(--good); font-weight: 500; }
+.bar { height: 6px; background: var(--sunk); border-radius: 999px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.card .facts { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); }
+.card .facts span { white-space: nowrap; }
+.card .actions { display: flex; gap: 8px; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 500; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.small { padding: 4px 10px; font-size: 12px; }
+.btn[disabled] { opacity: .5; cursor: default; }
+
+/* Tables */
+.tablebox { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--sunk); }
+td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td.r, th.r { text-align: right; }
+tbody tr.click { cursor: pointer; }
+tbody tr.click:hover td { background: var(--sunk); }
+td .sub { display: block; color: var(--muted); font-size: 12px; max-width: 46ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+td .ttl { font-weight: 500; }
+.good { color: var(--good); }
+.more { display: flex; justify-content: center; margin-top: 12px; }
+
+/* Money tab */
+.money { display: grid; gap: 26px; }
+.money h3 { font-family: var(--display); font-size: 18px; margin: 0 0 4px; }
+.money .how { color: var(--muted); margin: 0 0 10px; max-width: 70ch; }
+
+/* Shopping list */
+.list { display: grid; gap: 10px; }
+.item { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; }
+.item.done { opacity: .62; }
+.item .what { min-width: 0; display: grid; gap: 3px; }
+.item .what button { all: unset; cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
+.item .what button:focus-visible { outline: 2px solid var(--accent); }
+.item .line2 { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.who { display: inline-flex; align-items: center; gap: 6px; }
+.who img { width: 18px; height: 18px; border-radius: 50%; }
+.status { display: flex; gap: 4px; flex-wrap: wrap; justify-content: end; }
+.status button { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 4px 10px; font-size: 12px; color: var(--muted); }
+.status button[aria-pressed="true"] { background: var(--soft); color: var(--soft-ink); border-color: transparent; font-weight: 600; }
+.status button.del { border-color: transparent; }
+
+.empty { border: 1px dashed var(--line); border-radius: var(--radius); padding: 28px 20px; text-align: center; color: var(--muted); }
+.notice { background: var(--soft); color: var(--soft-ink); border-radius: var(--radius); padding: 10px 14px; font-size: 13px; margin-bottom: 14px; }
+
+/* Product sheet */
+.scrim { position: fixed; inset: 0; background: rgba(20, 8, 14, 0.38); z-index: 20; }
+.sheet { position: fixed; z-index: 21; top: 0; right: 0; bottom: 0; width: min(560px, 100%); background: var(--bg); box-shadow: var(--shadow); overflow-y: auto;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) calc(30px + env(safe-area-inset-bottom, 0px)) 20px;
+  display: grid; gap: 18px; align-content: start; animation: slide .22s ease-out; }
+@keyframes slide { from { transform: translateX(24px); opacity: .4; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sheet { animation: none; } }
+.sheet header { display: grid; gap: 8px; }
+.sheet h2 { font-family: var(--display); font-size: 24px; margin: 0; line-height: 1.15; overflow-wrap: anywhere; text-wrap: balance; }
+.sheet .close { justify-self: end; }
+.sheet .variant { color: var(--muted); font-size: 14px; white-space: pre-line; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.stats div { background: var(--surface); padding: 10px 12px; display: grid; gap: 2px; min-width: 0; }
+.stats span { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.stats b { font-family: var(--mono); font-weight: 500; font-size: 16px; overflow-wrap: anywhere; }
+.sheet h3 { font-family: var(--display); font-size: 16px; margin: 0 0 8px; }
+.hint { background: var(--good-soft); color: var(--good); border-radius: var(--radius); padding: 10px 14px; font-size: 14px; }
+form.add { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+form.add label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+form.add input { width: 140px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+.notes { display: grid; gap: 8px; }
+.note { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; display: grid; gap: 4px; }
+.note p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.note .by { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+textarea { width: 100%; min-height: 70px; resize: vertical; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+
+@media (max-width: 640px) {
+  .brand h1 { font-size: 22px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .item { grid-template-columns: minmax(0, 1fr); }
+  .status { justify-content: start; }
+}
+
+/* Standalone page: what the claude.ai skeleton used to provide */
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+.brand .tools { display: flex; gap: 8px; margin-left: auto; }
+.btn[disabled] { opacity: .6; }
+@media (max-width: 640px) { .brand .tools { margin-left: 0; width: 100%; } }
+</style>
+</head>
+<body>
+
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Marché <span class="petal">Rinaorc</span></h1>
+      <span class="meta" id="meta">Chargement des prix…</span>
+      <div class="tools">
+        <button class="btn small" id="refresh" type="button">Actualiser</button>
+        <button class="btn small" id="access" type="button">Accès équipe</button>
+      </div>
+    </div>
+    <div class="searchrow">
+      <label class="search" for="q">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="Chercher un objet, une variante, un vendeur…" autocomplete="off">
+      </label>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Vues">
+      <button class="tab" role="tab" data-tab="plans" id="t-plans">Bons plans <span class="count" id="c-plans">0</span></button>
+      <button class="tab" role="tab" data-tab="hdv" id="t-hdv">HDV</button>
+      <button class="tab" role="tab" data-tab="boutique" id="t-boutique">Boutique</button>
+      <button class="tab" role="tab" data-tab="argent" id="t-argent">Gagner de l'argent</button>
+      <button class="tab" role="tab" data-tab="liste" id="t-liste">Liste d'achats <span class="count" id="c-liste">0</span></button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <section id="v-plans" data-view="plans">
+    <div class="view-head">
+      <div>
+        <h2>Bons plans de l'HDV</h2>
+        <p>Les annonces les moins chères face au prix habituel du même objet, variante par variante. Au moins trois annonces pour juger.</p>
+      </div>
+      <div class="filters">
+        <div class="seg" data-filter="type" role="group" aria-label="Type d'objet">
+          <button data-v="all" aria-pressed="true">Tous</button><button data-v="Normal" aria-pressed="false">Normaux</button><button data-v="Custom" aria-pressed="false">Custom</button>
+        </div>
+      </div>
+    </div>
+    <div class="cards" id="plans"></div>
+  </section>
+
+  <section id="v-hdv" data-view="hdv" hidden>
+    <div class="view-head">
+      <div>
+        <h2>Hôtel des ventes</h2>
+        <p>Un produit par ligne : même objet, même nom, même description. Les prix sont ramenés à l'unité.</p>
+      </div>
+      <div class="filters">
+        <div class="seg" data-filter="type" role="group" aria-label="Type d'objet">
+          <button data-v="all" aria-pressed="true">Tous</button><button data-v="Normal" aria-pressed="false">Normaux</button><button data-v="Custom" aria-pressed="false">Custom</button>
+        </div>
+        <label class="check" for="dealsOnly"><input type="checkbox" id="dealsOnly"> Bonnes affaires</label>
+        <select class="sort" id="hdvSort" aria-label="Trier">
+          <option value="discount">Plus grosse baisse</option>
+          <option value="n">Plus d'annonces</option>
+          <option value="best-asc">Prix unitaire croissant</option>
+          <option value="best-desc">Prix unitaire décroissant</option>
+          <option value="name">Nom</option>
+        </select>
+      </div>
+    </div>
+    <div class="tablebox"><table>
+      <thead><tr><th>Objet</th><th class="r">Annonces</th><th class="r">Meilleur / u</th><th class="r">Médiane</th><th class="r">Écart</th><th>Moins cher chez</th></tr></thead>
+      <tbody id="hdvRows"></tbody>
+    </table></div>
+    <div class="more" id="hdvMore"></div>
+  </section>
+
+  <section id="v-boutique" data-view="boutique" hidden>
+    <div class="view-head">
+      <div>
+        <h2>Boutique du serveur</h2>
+        <p>Prix fixes : ce que coûte un objet en boutique, et ce qu'elle t'en donne quand tu le revends.</p>
+      </div>
+      <div class="filters">
+        <div class="seg" data-filter="type" role="group" aria-label="Type d'objet">
+          <button data-v="all" aria-pressed="true">Tous</button><button data-v="Normal" aria-pressed="false">Normaux</button><button data-v="Custom" aria-pressed="false">Custom</button>
+        </div>
+      </div>
+    </div>
+    <div class="tablebox"><table>
+      <thead><tr><th>Objet</th><th class="r">Achat / u</th><th class="r">Rachat / u</th><th class="r">À l'HDV dès</th></tr></thead>
+      <tbody id="shopRows"></tbody>
+    </table></div>
+  </section>
+
+  <section id="v-argent" data-view="argent" hidden>
+    <div class="view-head">
+      <div>
+        <h2>Gagner de l'argent</h2>
+        <p>Les écarts de prix dans les annonces en vente. À vérifier en jeu avant d'acheter : une annonce peut partir à tout moment.</p>
+      </div>
+    </div>
+    <div class="money">
+      <div>
+        <h3>Acheter à l'HDV, revendre à la boutique</h3>
+        <p class="how">Un joueur vend moins cher que ce que la boutique rachète : la différence est un gain direct.</p>
+        <div class="tablebox"><table>
+          <thead><tr><th>Objet</th><th class="r">HDV dès</th><th class="r">Rachat boutique</th><th class="r">Gain / u</th><th>Vendeur</th></tr></thead>
+          <tbody id="m1"></tbody>
+        </table></div>
+      </div>
+      <div>
+        <h3>Acheter en boutique, revendre à l'HDV</h3>
+        <p class="how">La boutique vend moins cher que le prix habituel entre joueurs.</p>
+        <div class="tablebox"><table>
+          <thead><tr><th>Objet</th><th class="r">Boutique</th><th class="r">Médiane HDV</th><th class="r">Gain / u</th></tr></thead>
+          <tbody id="m2"></tbody>
+        </table></div>
+      </div>
+      <div>
+        <h3>Racheter le moins cher, remettre au prix suivant</h3>
+        <p class="how">Le lot le moins cher est loin sous le deuxième : l'acheter et le remettre en vente juste sous ce deuxième prix.</p>
+        <div class="tablebox"><table>
+          <thead><tr><th>Objet</th><th class="r">Moins cher</th><th class="r">Suivant</th><th class="r">Gain / u</th><th class="r">Annonces</th></tr></thead>
+          <tbody id="m3"></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="v-liste" data-view="liste" hidden>
+    <div class="view-head">
+      <div>
+        <h2>Liste d'achats de l'équipe</h2>
+        <p>Ajoute un produit depuis sa fiche. Chacun indique qui s'en occupe et ce qui est acheté. Lecture libre ; pour écrire, il faut le code d'équipe.</p>
+      </div>
+      <div class="filters">
+        <div class="seg" id="listFilter" role="group" aria-label="Statut">
+          <button data-v="open" aria-pressed="true">En cours</button><button data-v="done" aria-pressed="false">Achetés</button><button data-v="all" aria-pressed="false">Tout</button>
+        </div>
+      </div>
+    </div>
+    <div id="listNotice"></div>
+    <div class="list" id="list"></div>
+  </section>
+</main>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="sheet" id="sheet" hidden aria-label="Fiche produit"></aside>
+<script src="app.js"></script>
+</body>
+</html>
